@@ -1,0 +1,49 @@
+version: '2'
+
+services:
+
+    nginx:
+        container_name: QueueNginx
+        build:
+            context: .
+            dockerfile: docker/nginx/Dockerfile
+        ports:
+            - "80:80"
+            - "444:443"
+        volumes_from:
+            - appdata
+        environment:
+            VIRTUAL_HOST: "queue.dev"
+            NGINX_CONF: "dev"
+        depends_on:
+            - php-fpm
+        links:
+            - "php-fpm:QueuePHP"
+
+    php-fpm:
+        container_name: QueuePHP
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+        volumes_from:
+            - appdata
+        depends_on:
+          - mysql
+          - beanstalkd
+          - appdata
+        links:
+            - "beanstalkd:QueueBeanstalkd"
+
+    beanstalkd:
+        container_name: QueueBeanstalkd
+        image: schickling/beanstalkd
+        ports:
+            - "11300:11300"
+
+    beanstalkd-console:
+        container_name: QueueBeanstalkdConsole
+        image: agaveapi/beanstalkd-console
+        links:
+            - "beanstalkd:QueueBeanstalkd"
+        ports:
+            - "8088:80"
